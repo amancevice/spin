@@ -1,0 +1,188 @@
+#!/bin/bash
+
+set -eo pipefail
+
+# Internal settings
+_SPIN_LINES_PRINTED=0               # Count lines printed to screen
+_SPIN_COLS=$(tput cols)             # Max length of line to print
+_SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)  # Spinner character
+_SPIN_SPINNER_CURSOR=0              # Cursor for _SPIN_SPINNER_CHARS
+_SPIN_STREAM=false                  # Stream/async flag
+_SPIN_STREAM_SLEEP=0.05             # Time to sleep between lines
+_SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
+
+# ENV/CLI settings
+SPIN_COMMAND="${SPIN_COMMAND}"
+SPIN_HELP=${SPIN_HELP:-false}
+SPIN_SPINNER_COLOR=${SPIN_SPINNER_COLOR:-203}
+SPIN_COLOR=${SPIN_COLOR:-240}
+SPIN_LINES=${SPIN_LINES:-5}
+SPIN_TITLE="${SPIN_TITLE}"
+SPIN_TITLE_COLOR=${SPIN_TITLE_COLOR:-69}
+
+count_line_breaks() {
+	echo "$(( ( ${#1} / $_SPIN_COLS ) + ( ${#1} % $_SPIN_COLS > 0 ) ))"
+}
+
+erase_lines() {
+	if [ $_SPIN_LINES_PRINTED -gt 0 ] ; then
+		for pc in $(seq 1 $_SPIN_LINES_PRINTED); do
+			printf '\e[A\e[K'
+		done
+		_SPIN_LINES_PRINTED=0
+	fi
+}
+
+execute_stream() {
+	# Process lines
+	while IFS= read -r line ; do
+		# Write line to tempfile
+		printf "$line\n" >> $_SPIN_TEMPFILE
+		# Print block
+		erase_lines
+		print_spinner
+		print_stream
+		# Sleep to produce cleaner formatting
+		sleep $_SPIN_STREAM_SLEEP
+	done < <(${SPIN_COMMAND[@]} 2>&1)
+
+	# Erase final lines
+	erase_lines
+}
+
+execute_async() {
+	# Start command in background & capture PID
+	${SPIN_COMMAND[@]} &> "$_SPIN_TEMPFILE" &
+	_SPIN_PID=$!
+
+	# Spin!
+	while true ; do
+		# Erase anything printed
+		erase_lines
+
+		# Print spinner + logs
+		print_spinner
+		print_stream
+
+		# Sleep or return
+		if ps -p $_SPIN_PID &> /dev/null ; then
+			sleep $_SPIN_STREAM_SLEEP
+		else
+			wait $_SPIN_PID
+			return $?
+		fi
+	done
+}
+
+print_help() {
+	cat <<-HELP
+		Usage:
+		  spin [OPTIONS] -- [COMMAND]
+		  COMMAND | spin [OPTIONS]
+
+		Options:
+		  -h, --help             Show this message
+		  -c, --color COLOR      ANSI color of log stream (default: 240)
+		  -n, --lines LINES      Lines to print before scrolling (default: 5)
+		  -t, --title TITLE      Spinner title text
+		  --spinner-color COLOR  ANSI color of spinner (default: 203)
+		  --title-color COLOR    ANSI color of title (default: 69)
+	HELP
+}
+
+print_line() {
+	tput rmam
+	printf '%s\n' "$1"
+	tput smam
+
+	# if [ "${#1}" -gt $_SPIN_COLS ] ; then
+	# 	printf '%s\n' "${1::$(( $_SPIN_COLS - ${2:-1} ))}…"
+	# else
+	# 	printf '%s\n' "${1::$_SPIN_COLS}"
+	# fi
+}
+
+print_spinner() {
+	# Increment spinner character
+	_SPIN_SPINNER_CURSOR=$(($_SPIN_SPINNER_CURSOR + 1))
+
+	# Print spinner + title
+	tput setaf $SPIN_SPINNER_COLOR
+	printf '%s ' ${_SPIN_SPINNER_CHARS[$(($_SPIN_SPINNER_CURSOR % 6))]}
+	tput setaf $SPIN_TITLE_COLOR
+	print_line "$SPIN_TITLE" 3
+	tput sgr0
+
+	# Increment lines printed to screen
+	_SPIN_LINES_PRINTED=$(($_SPIN_LINES_PRINTED + 1))
+}
+
+print_stream() {
+	# Print log lines
+	tput setaf $SPIN_COLOR
+	while IFS= read -r line ; do
+		print_line "$line"
+		_SPIN_LINES_PRINTED="$(($_SPIN_LINES_PRINTED + 1))"
+	done < <(tail -n $SPIN_LINES $_SPIN_TEMPFILE)
+	tput sgr0
+}
+
+trap_exit() {
+	_SPIN_EXIT_CODE=$?
+
+	case $_SPIN_EXIT_CODE in
+		0)
+			erase_lines
+			;;
+		*)
+			tput setaf $SPIN_SPINNER_COLOR
+			printf 'Error %s\n' $_SPIN_EXIT_CODE
+			tput sgr0
+			;;
+	esac
+
+	tput sgr0
+	tput smam
+	rm -f $_SPIN_TEMPFILE
+
+	return $_SPIN_EXIT_CODE
+}
+
+main() {
+	while (( $# )) ; do
+		case "$1" in
+			-h | --help)     shift ; SPIN_HELP=true         ; break ;;
+			-c | --color)    shift ; SPIN_COLOR=$1          ; shift ;;
+			-n | --lines)    shift ; SPIN_LINES=$1          ; shift ;;
+			-t | --title)    shift ; SPIN_TITLE="$1"        ; shift ;;
+			--spinner-color) shift ; SPIN_SPINNER_COLOR=$1  ; shift ;;
+			--title-color)   shift ; SPIN_TITLE_COLOR=$1    ; shift ;;
+			--)              shift ; SPIN_COMMAND="$@"      ; break ;;
+		esac
+	done
+
+	if $SPIN_HELP ; then
+		print_help
+		exit 0
+	fi
+
+	# Check if stdin is open
+	if ! [ -t 0 ] ; then
+		_SPIN_STREAM=true
+		SPIN_COMMAND='cat'
+	fi
+
+	# Set default title
+	if [ -z "$SPIN_TITLE" ] ; then
+		SPIN_TITLE="${SPIN_COMMAND[*]}"
+	fi
+
+	if $_SPIN_STREAM ; then
+		execute_stream
+	else
+		execute_async
+	fi
+}
+
+trap trap_exit EXIT
+main "$@" >&2
