@@ -4,6 +4,8 @@ Execute a command and display a scrolling block of logs
 
 Inspired by Docker's layer build output.
 
+![example](./docs/example.gif)
+
 ## Usage
 
 Simple usage:
