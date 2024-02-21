@@ -12,12 +12,14 @@ _SPIN_STREAM_SLEEP=0.05             # Time to sleep between lines
 _SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
 
 # ENV/CLI settings
+SPIN_COLOR=${SPIN_COLOR:-240}
 SPIN_COMMAND="${SPIN_COMMAND}"
 SPIN_HELP=${SPIN_HELP:-false}
-SPIN_SPINNER_COLOR=${SPIN_SPINNER_COLOR:-209}
-SPIN_COLOR=${SPIN_COLOR:-240}
 SPIN_LINES=${SPIN_LINES:-5}
+SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
+SPIN_SPINNER_COLOR=${SPIN_SPINNER_COLOR:-209}
 SPIN_TITLE="${SPIN_TITLE}"
+SPIN_TITLE_BURN=${SPIN_TITLE_BURN:-false}
 SPIN_TITLE_COLOR=${SPIN_TITLE_COLOR:-69}
 
 count_line_breaks() {
@@ -52,7 +54,12 @@ execute_stream() {
 
 execute_async() {
 	# Start command in background & capture PID
-	${SPIN_COMMAND[@]} &> "$_SPIN_TEMPFILE" &
+	if $SPIN_SHOW_OUTPUT ; then
+		_SPIN_TEMPFILE_STDOUT="$(mktemp)"
+		${SPIN_COMMAND[@]} 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
+	else
+		${SPIN_COMMAND[@]} &> "$_SPIN_TEMPFILE" &
+	fi
 	_SPIN_PID=$!
 
 	# Spin!
@@ -67,8 +74,9 @@ execute_async() {
 		# Sleep or return
 		if ps -p $_SPIN_PID &> /dev/null ; then
 			sleep $_SPIN_STREAM_SLEEP
+		elif wait $_SPIN_PID ; then
+			return
 		else
-			wait $_SPIN_PID
 			return $?
 		fi
 	done
@@ -84,7 +92,9 @@ print_help() {
 		  -h, --help             Show this message
 		  -c, --color COLOR      ANSI color of log stream (default: 240)
 		  -n, --lines LINES      Lines to print before scrolling (default: 5)
+		  -o, --show-output      Show stdout contents on command completion
 		  -t, --title TITLE      Spinner title text
+		  -b, --title-burn       Show title on command completion
 		  --spinner-color COLOR  ANSI color of spinner (default: 203)
 		  --title-color COLOR    ANSI color of title (default: 69)
 	HELP
@@ -110,11 +120,18 @@ print_spinner() {
 	tput setaf $SPIN_SPINNER_COLOR
 	printf '%s ' ${_SPIN_SPINNER_CHARS[$(($_SPIN_SPINNER_CURSOR % 6))]}
 	tput setaf $SPIN_TITLE_COLOR
-	print_line "$SPIN_TITLE" 3
+	print_line "$SPIN_TITLE"
 	tput sgr0
 
 	# Increment lines printed to screen
 	_SPIN_LINES_PRINTED=$(($_SPIN_LINES_PRINTED + 1))
+}
+
+print_spinner_dead() {
+	# Print spinner + title
+	tput setaf $SPIN_COLOR
+	print_line "⠿ $SPIN_TITLE"
+	tput sgr0
 }
 
 print_stream() {
@@ -130,20 +147,31 @@ print_stream() {
 trap_exit() {
 	_SPIN_EXIT_CODE=$?
 
+	# Clean up stream
+	erase_lines
+
 	case $_SPIN_EXIT_CODE in
 		0)
-			erase_lines
+			# Print finished title
+			! $SPIN_TITLE_BURN || print_spinner_dead
 			;;
 		*)
-			tput setaf $SPIN_SPINNER_COLOR
-			printf 'Error %s\n' $_SPIN_EXIT_CODE
-			tput sgr0
+			# Print full stream on error
+			print_spinner_dead
+			print_stream
 			;;
 	esac
 
+	# Ensure terminal is reset
 	tput sgr0
 	tput smam
-	rm -f $_SPIN_TEMPFILE
+
+	# Show stdout
+	! $SPIN_SHOW_OUTPUT || cat "$_SPIN_TEMPFILE_STDOUT"
+
+	# Clean up
+	rm -f "$_SPIN_TEMPFILE_STDOUT"
+	rm -f "$_SPIN_TEMPFILE"
 
 	return $_SPIN_EXIT_CODE
 }
@@ -151,13 +179,15 @@ trap_exit() {
 main() {
 	while (( $# )) ; do
 		case "$1" in
-			-h | --help)     shift ; SPIN_HELP=true         ; break ;;
-			-c | --color)    shift ; SPIN_COLOR=$1          ; shift ;;
-			-n | --lines)    shift ; SPIN_LINES=$1          ; shift ;;
-			-t | --title)    shift ; SPIN_TITLE="$1"        ; shift ;;
-			--spinner-color) shift ; SPIN_SPINNER_COLOR=$1  ; shift ;;
-			--title-color)   shift ; SPIN_TITLE_COLOR=$1    ; shift ;;
-			--)              shift ; SPIN_COMMAND="$@"      ; break ;;
+			-h | --help)        shift ; SPIN_HELP=true         ; break ;;
+			-c | --color)       shift ; SPIN_COLOR=$1          ; shift ;;
+			-n | --lines)       shift ; SPIN_LINES=$1          ; shift ;;
+			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true  ;;
+			-t | --title)       shift ; SPIN_TITLE="$1"        ; shift ;;
+			-b | --title-burn)  shift ; SPIN_TITLE_BURN=true   ;;
+			--spinner-color)    shift ; SPIN_SPINNER_COLOR=$1  ; shift ;;
+			--title-color)      shift ; SPIN_TITLE_COLOR=$1    ; shift ;;
+			--)                 shift ; SPIN_COMMAND="$@"      ; break ;;
 		esac
 	done
 

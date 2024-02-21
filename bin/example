@@ -1,8 +1,10 @@
 #!/bin/bash
 
 for i in $(seq 1 ${2:-25}) ; do
-	printf "%s %s\n" "$i" "$(echo $i | sha256sum)"
+	printf "%s %s\n" "$i" "$(echo $i | sha256sum)" >&2
 	sleep 0.1
 done
+
+echo 'All Done!'
 
 exit ${1:-0}
