@@ -100,18 +100,6 @@ print_help() {
 	HELP
 }
 
-print_line() {
-	tput rmam
-	printf '%s\n' "$1"
-	tput smam
-
-	# if [ "${#1}" -gt $_SPIN_COLS ] ; then
-	# 	printf '%s\n' "${1::$(( $_SPIN_COLS - ${2:-1} ))}…"
-	# else
-	# 	printf '%s\n' "${1::$_SPIN_COLS}"
-	# fi
-}
-
 print_spinner() {
 	# Increment spinner character
 	_SPIN_SPINNER_CURSOR=$(($_SPIN_SPINNER_CURSOR + 1))
@@ -120,7 +108,7 @@ print_spinner() {
 	tput setaf $SPIN_SPINNER_COLOR
 	printf '%s ' ${_SPIN_SPINNER_CHARS[$(($_SPIN_SPINNER_CURSOR % 6))]}
 	tput setaf $SPIN_TITLE_COLOR
-	print_line "$SPIN_TITLE"
+	printf '%s\n' "$SPIN_TITLE"
 	tput sgr0
 
 	# Increment lines printed to screen
@@ -130,7 +118,7 @@ print_spinner() {
 print_spinner_dead() {
 	# Print spinner + title
 	tput setaf $SPIN_COLOR
-	print_line "⠿ $SPIN_TITLE"
+	printf '%s\n' "⠿ $SPIN_TITLE"
 	tput sgr0
 }
 
@@ -138,10 +126,17 @@ print_stream() {
 	# Print log lines
 	tput setaf $SPIN_COLOR
 	while IFS= read -r line ; do
-		print_line "$line"
+		printf '%s\n' "$line"
 		_SPIN_LINES_PRINTED="$(($_SPIN_LINES_PRINTED + 1))"
 	done < <(tail -n $SPIN_LINES $_SPIN_TEMPFILE)
 	tput sgr0
+}
+
+tput() {
+	case "$TERM" in
+		'' | dumb) ;;
+		*) command tput "$@" ;;
+	esac
 }
 
 trap_exit() {
@@ -169,7 +164,7 @@ trap_exit() {
 	# Show stdout
 	! $SPIN_SHOW_OUTPUT || cat "$_SPIN_TEMPFILE_STDOUT"
 
-	# Clean up
+	# Clean up tempfiles
 	rm -f "$_SPIN_TEMPFILE_STDOUT"
 	rm -f "$_SPIN_TEMPFILE"
 
@@ -206,6 +201,9 @@ main() {
 	if [ -z "$SPIN_TITLE" ] ; then
 		SPIN_TITLE="${SPIN_COMMAND[*]}"
 	fi
+
+	# Turn off word-wrapping
+	tput rmam
 
 	if $_SPIN_STREAM ; then
 		execute_stream
