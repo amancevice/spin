@@ -22,10 +22,6 @@ SPIN_TITLE="${SPIN_TITLE}"
 SPIN_TITLE_BURN=${SPIN_TITLE_BURN:-false}
 SPIN_TITLE_COLOR=${SPIN_TITLE_COLOR:-69}
 
-count_line_breaks() {
-	echo "$(( ( ${#1} / $_SPIN_COLS ) + ( ${#1} % $_SPIN_COLS > 0 ) ))"
-}
-
 erase_lines() {
 	if [ $_SPIN_LINES_PRINTED -gt 0 ] ; then
 		for pc in $(seq 1 $_SPIN_LINES_PRINTED); do
