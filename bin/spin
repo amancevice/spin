@@ -4,7 +4,6 @@ set -eo pipefail
 
 # Internal settings
 _SPIN_LINES_PRINTED=0               # Count lines printed to screen
-_SPIN_COLS=$(tput cols)             # Max length of line to print
 _SPIN_EXIT_CODE=0                   # Exit code holder
 _SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)  # Spinner character
 _SPIN_SPINNER_CURSOR=0              # Cursor for _SPIN_SPINNER_CHARS
