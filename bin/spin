@@ -12,18 +12,21 @@ _SPIN_STREAM_SLEEP=0.05             # Time to sleep between lines
 _SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
 _SPIN_TEMPFILE_STDOUT="$(mktemp)"   # Tempfile for stdout
 
-# ENV/CLI settings
-SPIN_COLOR=${SPIN_COLOR:-240}
-SPIN_COMMAND="${SPIN_COMMAND}"
-SPIN_FOREGROUND=${SPIN_FOREGROUND:-false}
+# Colors
+SPIN_COLOR_LOGS=${SPIN_COLOR_LOGS:-240}
+SPIN_COLOR_SPINNER=${SPIN_COLOR_SPINNER:-209}
+SPIN_COLOR_TITLE=${SPIN_COLOR_TITLE:-69}
+
+# Flags
 SPIN_HELP=${SPIN_HELP:-false}
-SPIN_LINES=${SPIN_LINES:-5}
+SPIN_FOREGROUND=${SPIN_FOREGROUND:-false}
 SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
-SPIN_SPINNER_COLOR=${SPIN_SPINNER_COLOR:-209}
+
+# Options
+SPIN_COMMAND="${SPIN_COMMAND}"
+SPIN_LINES="${SPIN_LINES:-5}"
 SPIN_TIMEOUT="${SPIN_TIMEOUT}"
 SPIN_TITLE="${SPIN_TITLE}"
-SPIN_TITLE_BURN=${SPIN_TITLE_BURN:-false}
-SPIN_TITLE_COLOR=${SPIN_TITLE_COLOR:-69}
 
 cleanup() {
 	# Clear screen
@@ -103,14 +106,14 @@ print_help() {
 
 		Options:
 		  -h, --help             Show this message
-		  -c, --color COLOR      ANSI color of log stream (default: 240)
 		  -f, --foreground       Run command in foreground
 		  -n, --lines LINES      Lines to print before scrolling (default: 5)
 		  -o, --show-output      Show stdout contents on command completion
 		  -T, --timeout SECONDS  Kill process after N seconds
 		  -t, --title TITLE      Spinner title text
-		  --spinner-color COLOR  ANSI color of spinner (default: 203)
-		  --title-color COLOR    ANSI color of title (default: 69)
+		  --color-logs COLOR     ANSI color of log stream (default: 240)
+		  --color-spinner COLOR  ANSI color of spinner (default: 209)
+		  --color-title COLOR    ANSI color of title (default: 69)
 	HELP
 }
 
@@ -119,9 +122,9 @@ print_spinner() {
 	_SPIN_SPINNER_CURSOR=$(expr $_SPIN_SPINNER_CURSOR % 5 + 1)
 
 	# Print spinner + title
-	tput setaf $SPIN_SPINNER_COLOR
+	tput setaf $SPIN_COLOR_SPINNER
 	printf '%s ' "${_SPIN_SPINNER_CHARS[$_SPIN_SPINNER_CURSOR]}"
-	tput setaf $SPIN_TITLE_COLOR
+	tput setaf $SPIN_COLOR_TITLE
 	printf '%s\n' "$SPIN_TITLE"
 	tput sgr0
 
@@ -131,14 +134,14 @@ print_spinner() {
 
 print_spinner_dead() {
 	# Print spinner + title
-	tput setaf $SPIN_COLOR
+	tput setaf $SPIN_COLOR_LOGS
 	printf '%s\n' "⠿ $SPIN_TITLE"
 	tput sgr0
 }
 
 print_stream() {
 	# Print log lines
-	tput setaf $SPIN_COLOR
+	tput setaf $SPIN_COLOR_LOGS
 	while IFS= read -r line ; do
 		printf '%s\n' "$line"
 		_SPIN_LINES_PRINTED=$(expr $_SPIN_LINES_PRINTED + 1)
@@ -172,14 +175,14 @@ main() {
 	while (( $# )) ; do
 		case "$1" in
 			-h | --help)        shift ; SPIN_HELP=true        ; break ;;
-			-c | --color)       shift ; SPIN_COLOR=$1         ; shift ;;
 			-f | --foreground)  shift ; SPIN_FOREGROUND=true          ;;
 			-n | --lines)       shift ; SPIN_LINES=$1         ; shift ;;
 			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true         ;;
 			-T | --timeout)     shift ; SPIN_TIMEOUT=$1       ; shift ;;
 			-t | --title)       shift ; SPIN_TITLE="$1"       ; shift ;;
-			--spinner-color)    shift ; SPIN_SPINNER_COLOR=$1 ; shift ;;
-			--title-color)      shift ; SPIN_TITLE_COLOR=$1   ; shift ;;
+			--color-logs)       shift ; SPIN_COLOR_LOGS=$1    ; shift ;;
+			--color-spinner)    shift ; SPIN_COLOR_SPINNER=$1 ; shift ;;
+			--color-title)      shift ; SPIN_COLOR_TITLE=$1   ; shift ;;
 			--)                 shift ; SPIN_COMMAND="$*"     ; break ;;
 			-*)                 return 2                              ;;
 			*)                  SPIN_COMMAND="$*"             ; break ;;
@@ -193,7 +196,7 @@ main() {
 
 	# Set default title
 	if [ -z "$SPIN_TITLE" ] ; then
-		SPIN_TITLE="${SPIN_COMMAND[*]}"
+		SPIN_TITLE="$SPIN_COMMAND"
 	fi
 
 	if $SPIN_FOREGROUND ; then
