@@ -13,6 +13,7 @@ _SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
 _SPIN_TEMPFILE_STDOUT="$(mktemp)"   # Tempfile for stdout
 
 # Colors
+SPIN_COLOR=true
 SPIN_COLOR_LOGS=${SPIN_COLOR_LOGS:-240}
 SPIN_COLOR_SPINNER=${SPIN_COLOR_SPINNER:-209}
 SPIN_COLOR_TITLE=${SPIN_COLOR_TITLE:-69}
@@ -152,7 +153,11 @@ print_stream() {
 tput() {
 	case "$TERM" in
 		'' | dumb) ;;
-		*) command tput "$@" ;;
+		*)
+			case "$1" in
+				setaf | sgr0) ! $SPIN_COLOR || command tput "$@" ;;
+				*) command tput "$@" ;;
+			esac
 	esac
 }
 
@@ -177,6 +182,7 @@ main() {
 			-h | --help)        shift ; SPIN_HELP=true        ; break ;;
 			-f | --foreground)  shift ; SPIN_FOREGROUND=true          ;;
 			-n | --lines)       shift ; SPIN_LINES=$1         ; shift ;;
+			-C | --no-color)    shift ; SPIN_COLOR=false              ;;
 			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true         ;;
 			-T | --timeout)     shift ; SPIN_TIMEOUT=$1       ; shift ;;
 			-t | --title)       shift ; SPIN_TITLE="$1"       ; shift ;;
