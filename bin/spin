@@ -11,6 +11,7 @@ _SPIN_STREAM=false                  # Stream/async flag
 _SPIN_STREAM_SLEEP=0.05             # Time to sleep between lines
 _SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
 _SPIN_TEMPFILE_STDOUT="$(mktemp)"   # Tempfile for stdout
+_SPIN_VERSION=v0.1.3
 
 # Colors
 SPIN_COLOR=true
@@ -19,7 +20,6 @@ SPIN_COLOR_SPINNER=${SPIN_COLOR_SPINNER:-209}
 SPIN_COLOR_TITLE=${SPIN_COLOR_TITLE:-69}
 
 # Flags
-SPIN_HELP=${SPIN_HELP:-false}
 SPIN_FOREGROUND=${SPIN_FOREGROUND:-false}
 SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
 
@@ -112,6 +112,7 @@ print_help() {
 		  -o, --show-output      Show stdout contents on command completion
 		  -T, --timeout SECONDS  Kill process after N seconds
 		  -t, --title TITLE      Spinner title text
+		  -v, --version          Show version
 		  --color-logs COLOR     ANSI color of log stream (default: 240)
 		  --color-spinner COLOR  ANSI color of spinner (default: 209)
 		  --color-title COLOR    ANSI color of title (default: 69)
@@ -150,6 +151,10 @@ print_stream() {
 	tput sgr0
 }
 
+print_version() {
+	echo "spin $_SPIN_VERSION"
+}
+
 tput() {
 	case "$TERM" in
 		'' | dumb) ;;
@@ -179,26 +184,22 @@ trap_exit() {
 main() {
 	while (( $# )) ; do
 		case "$1" in
-			-h | --help)        shift ; SPIN_HELP=true        ; break ;;
-			-f | --foreground)  shift ; SPIN_FOREGROUND=true          ;;
-			-n | --lines)       shift ; SPIN_LINES=$1         ; shift ;;
-			-C | --no-color)    shift ; SPIN_COLOR=false              ;;
-			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true         ;;
-			-T | --timeout)     shift ; SPIN_TIMEOUT=$1       ; shift ;;
-			-t | --title)       shift ; SPIN_TITLE="$1"       ; shift ;;
-			--color-logs)       shift ; SPIN_COLOR_LOGS=$1    ; shift ;;
-			--color-spinner)    shift ; SPIN_COLOR_SPINNER=$1 ; shift ;;
-			--color-title)      shift ; SPIN_COLOR_TITLE=$1   ; shift ;;
-			--)                 shift ; SPIN_COMMAND="$*"     ; break ;;
-			-*)                 return 2                              ;;
-			*)                  SPIN_COMMAND="$*"             ; break ;;
+			-h | --help)        shift ; print_help            ; return ;;
+			-f | --foreground)  shift ; SPIN_FOREGROUND=true           ;;
+			-n | --lines)       shift ; SPIN_LINES=$1         ; shift  ;;
+			-C | --no-color)    shift ; SPIN_COLOR=false               ;;
+			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true          ;;
+			-T | --timeout)     shift ; SPIN_TIMEOUT=$1       ; shift  ;;
+			-t | --title)       shift ; SPIN_TITLE="$1"       ; shift  ;;
+			-v | --version)     shift ; print_version         ; return ;;
+			--color-logs)       shift ; SPIN_COLOR_LOGS=$1    ; shift  ;;
+			--color-spinner)    shift ; SPIN_COLOR_SPINNER=$1 ; shift  ;;
+			--color-title)      shift ; SPIN_COLOR_TITLE=$1   ; shift  ;;
+			--)                 shift ; SPIN_COMMAND="$*"     ; break  ;;
+			-*)                 return 2                               ;;
+			*)                  SPIN_COMMAND="$*"             ; break  ;;
 		esac
 	done
-
-	if $SPIN_HELP ; then
-		print_help
-		return
-	fi
 
 	# Set default title
 	if [ -z "$SPIN_TITLE" ] ; then

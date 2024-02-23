@@ -1,6 +1,8 @@
 PREFIX := /usr/local
 
 test:
+	./bin/spin --help
+	./bin/spin --version
 	./bin/spin -- ./bin/example
 	./bin/spin -o -- ./bin/example
 	./bin/spin -C -- ./bin/example
