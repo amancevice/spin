@@ -5,11 +5,13 @@ set -eo pipefail
 # Internal settings
 _SPIN_LINES_PRINTED=0               # Count lines printed to screen
 _SPIN_COLS=$(tput cols)             # Max length of line to print
+_SPIN_EXIT_CODE=0                   # Exit code holder
 _SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)  # Spinner character
 _SPIN_SPINNER_CURSOR=0              # Cursor for _SPIN_SPINNER_CHARS
 _SPIN_STREAM=false                  # Stream/async flag
 _SPIN_STREAM_SLEEP=0.05             # Time to sleep between lines
 _SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
+_SPIN_TEMPFILE_STDOUT="$(mktemp)"   # Tempfile for stdout
 
 # ENV/CLI settings
 SPIN_COLOR=${SPIN_COLOR:-240}
@@ -21,6 +23,32 @@ SPIN_SPINNER_COLOR=${SPIN_SPINNER_COLOR:-209}
 SPIN_TITLE="${SPIN_TITLE}"
 SPIN_TITLE_BURN=${SPIN_TITLE_BURN:-false}
 SPIN_TITLE_COLOR=${SPIN_TITLE_COLOR:-69}
+
+cleanup() {
+	erase_lines
+
+	case $_SPIN_EXIT_CODE in
+		# OK
+		0)
+			# Print finished title
+			! $SPIN_TITLE_BURN || print_spinner_dead
+			;;
+		# Usage error
+		2)
+			print_help
+			;;
+		# General error
+		*)
+			# Print full stream on error
+			print_spinner_dead
+			print_stream
+			;;
+	esac
+
+	# Ensure terminal is reset
+	tput sgr0
+	tput smam
+}
 
 erase_lines() {
 	if [ $_SPIN_LINES_PRINTED -gt 0 ] ; then
@@ -51,7 +79,6 @@ execute_stream() {
 execute_async() {
 	# Start command in background & capture PID
 	if $SPIN_SHOW_OUTPUT ; then
-		_SPIN_TEMPFILE_STDOUT="$(mktemp)"
 		${SPIN_COMMAND[@]} 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
 	else
 		${SPIN_COMMAND[@]} &> "$_SPIN_TEMPFILE" &
@@ -102,7 +129,7 @@ print_spinner() {
 
 	# Print spinner + title
 	tput setaf $SPIN_SPINNER_COLOR
-	printf '%s ' ${_SPIN_SPINNER_CHARS[$_SPIN_SPINNER_CURSOR]}
+	printf '%s ' "${_SPIN_SPINNER_CHARS[$_SPIN_SPINNER_CURSOR]}"
 	tput setaf $SPIN_TITLE_COLOR
 	printf '%s\n' "$SPIN_TITLE"
 	tput sgr0
@@ -138,31 +165,14 @@ tput() {
 trap_exit() {
 	_SPIN_EXIT_CODE=$?
 
-	# Clean up stream
-	erase_lines
-
-	case $_SPIN_EXIT_CODE in
-		0)
-			# Print finished title
-			! $SPIN_TITLE_BURN || print_spinner_dead
-			;;
-		*)
-			# Print full stream on error
-			print_spinner_dead
-			print_stream
-			;;
-	esac
-
-	# Ensure terminal is reset
-	tput sgr0
-	tput smam
+	# Clean up stderr
+	cleanup >&2
 
 	# Show stdout
 	! $SPIN_SHOW_OUTPUT || cat "$_SPIN_TEMPFILE_STDOUT"
 
 	# Clean up tempfiles
-	rm -f "$_SPIN_TEMPFILE_STDOUT"
-	rm -f "$_SPIN_TEMPFILE"
+	rm -f "$_SPIN_TEMPFILE" "$_SPIN_TEMPFILE_STDOUT"
 
 	return $_SPIN_EXIT_CODE
 }
@@ -178,13 +188,14 @@ main() {
 			-b | --title-burn)  shift ; SPIN_TITLE_BURN=true   ;;
 			--spinner-color)    shift ; SPIN_SPINNER_COLOR=$1  ; shift ;;
 			--title-color)      shift ; SPIN_TITLE_COLOR=$1    ; shift ;;
-			--)                 shift ; SPIN_COMMAND="$@"      ; break ;;
+			--)                 shift ; SPIN_COMMAND="$*"      ; break ;;
+			-*)                 return 2 ;;
 		esac
 	done
 
 	if $SPIN_HELP ; then
 		print_help
-		exit 0
+		return
 	fi
 
 	# Check if stdin is open
