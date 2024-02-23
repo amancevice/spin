@@ -15,33 +15,30 @@ _SPIN_TEMPFILE_STDOUT="$(mktemp)"   # Tempfile for stdout
 # ENV/CLI settings
 SPIN_COLOR=${SPIN_COLOR:-240}
 SPIN_COMMAND="${SPIN_COMMAND}"
+SPIN_FOREGROUND=${SPIN_FOREGROUND:-false}
 SPIN_HELP=${SPIN_HELP:-false}
 SPIN_LINES=${SPIN_LINES:-5}
 SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
 SPIN_SPINNER_COLOR=${SPIN_SPINNER_COLOR:-209}
+SPIN_TIMEOUT="${SPIN_TIMEOUT}"
 SPIN_TITLE="${SPIN_TITLE}"
 SPIN_TITLE_BURN=${SPIN_TITLE_BURN:-false}
 SPIN_TITLE_COLOR=${SPIN_TITLE_COLOR:-69}
 
 cleanup() {
+	# Clear screen
 	erase_lines
+
+	# Show dead spinner
+	$SPIN_FOREGROUND || print_spinner_dead
 
 	case $_SPIN_EXIT_CODE in
 		# OK
-		0)
-			# Print finished title
-			! $SPIN_TITLE_BURN || print_spinner_dead
-			;;
+		0) ;;
 		# Usage error
-		2)
-			print_help
-			;;
+		2) print_help ;;
 		# General error
-		*)
-			# Print full stream on error
-			print_spinner_dead
-			print_stream
-			;;
+		*) print_stream ;;
 	esac
 
 	# Ensure terminal is reset
@@ -58,29 +55,19 @@ erase_lines() {
 	fi
 }
 
-execute_stream() {
-	# Process lines
-	while IFS= read -r line ; do
-		# Write line to tempfile
-		printf "$line\n" >> $_SPIN_TEMPFILE
-		# Print block
-		erase_lines
-		print_spinner
-		print_stream
-		# Sleep to produce cleaner formatting
-		sleep $_SPIN_STREAM_SLEEP
-	done < <(${SPIN_COMMAND[@]} 2>&1)
+execute_background() {
+	# Turn off word-wrapping
+	tput rmam
 
-	# Erase final lines
-	erase_lines
-}
-
-execute_async() {
 	# Start command in background & capture PID
-	if $SPIN_SHOW_OUTPUT ; then
-		${SPIN_COMMAND[@]} 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
+	if [ -n "$SPIN_TIMEOUT" ] && $SPIN_SHOW_OUTPUT ; then
+		timeout $SPIN_TIMEOUT "$SPIN_COMMAND" 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
+	elif $SPIN_SHOW_OUTPUT ; then
+		eval "$SPIN_COMMAND" 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
+	elif [ -n "$SPIN_TIMEOUT" ] ; then
+		timeout $SPIN_TIMEOUT "$SPIN_COMMAND" &> "$_SPIN_TEMPFILE" &
 	else
-		${SPIN_COMMAND[@]} &> "$_SPIN_TEMPFILE" &
+		eval "$SPIN_COMMAND" &> "$_SPIN_TEMPFILE" &
 	fi
 	_SPIN_PID=$!
 
@@ -104,19 +91,24 @@ execute_async() {
 	done
 }
 
+execute_foreground() {
+	print_spinner_dead >&2
+	eval "$SPIN_COMMAND"
+}
+
 print_help() {
 	cat <<-HELP
 		Usage:
 		  spin [OPTIONS] -- [COMMAND]
-		  COMMAND | spin [OPTIONS]
 
 		Options:
 		  -h, --help             Show this message
 		  -c, --color COLOR      ANSI color of log stream (default: 240)
+		  -f, --foreground       Run command in foreground
 		  -n, --lines LINES      Lines to print before scrolling (default: 5)
 		  -o, --show-output      Show stdout contents on command completion
+		  -T, --timeout SECONDS  Kill process after N seconds
 		  -t, --title TITLE      Spinner title text
-		  -b, --title-burn       Show title on command completion
 		  --spinner-color COLOR  ANSI color of spinner (default: 203)
 		  --title-color COLOR    ANSI color of title (default: 69)
 	HELP
@@ -168,7 +160,7 @@ trap_exit() {
 	cleanup >&2
 
 	# Show stdout
-	! $SPIN_SHOW_OUTPUT || cat "$_SPIN_TEMPFILE_STDOUT"
+	$SPIN_FOREGROUND || ! $SPIN_SHOW_OUTPUT || cat "$_SPIN_TEMPFILE_STDOUT"
 
 	# Clean up tempfiles
 	rm -f "$_SPIN_TEMPFILE" "$_SPIN_TEMPFILE_STDOUT"
@@ -179,16 +171,18 @@ trap_exit() {
 main() {
 	while (( $# )) ; do
 		case "$1" in
-			-h | --help)        shift ; SPIN_HELP=true         ; break ;;
-			-c | --color)       shift ; SPIN_COLOR=$1          ; shift ;;
-			-n | --lines)       shift ; SPIN_LINES=$1          ; shift ;;
-			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true  ;;
-			-t | --title)       shift ; SPIN_TITLE="$1"        ; shift ;;
-			-b | --title-burn)  shift ; SPIN_TITLE_BURN=true   ;;
-			--spinner-color)    shift ; SPIN_SPINNER_COLOR=$1  ; shift ;;
-			--title-color)      shift ; SPIN_TITLE_COLOR=$1    ; shift ;;
-			--)                 shift ; SPIN_COMMAND="$*"      ; break ;;
-			-*)                 return 2 ;;
+			-h | --help)        shift ; SPIN_HELP=true        ; break ;;
+			-c | --color)       shift ; SPIN_COLOR=$1         ; shift ;;
+			-f | --foreground)  shift ; SPIN_FOREGROUND=true          ;;
+			-n | --lines)       shift ; SPIN_LINES=$1         ; shift ;;
+			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true         ;;
+			-T | --timeout)     shift ; SPIN_TIMEOUT=$1       ; shift ;;
+			-t | --title)       shift ; SPIN_TITLE="$1"       ; shift ;;
+			--spinner-color)    shift ; SPIN_SPINNER_COLOR=$1 ; shift ;;
+			--title-color)      shift ; SPIN_TITLE_COLOR=$1   ; shift ;;
+			--)                 shift ; SPIN_COMMAND="$*"     ; break ;;
+			-*)                 return 2                              ;;
+			*)                  SPIN_COMMAND="$*"             ; break ;;
 		esac
 	done
 
@@ -197,26 +191,17 @@ main() {
 		return
 	fi
 
-	# Check if stdin is open
-	if ! [ -t 0 ] ; then
-		_SPIN_STREAM=true
-		SPIN_COMMAND='cat'
-	fi
-
 	# Set default title
 	if [ -z "$SPIN_TITLE" ] ; then
 		SPIN_TITLE="${SPIN_COMMAND[*]}"
 	fi
 
-	# Turn off word-wrapping
-	tput rmam
-
-	if $_SPIN_STREAM ; then
-		execute_stream
+	if $SPIN_FOREGROUND ; then
+		execute_foreground
 	else
-		execute_async
+		execute_background >&2
 	fi
 }
 
 trap trap_exit EXIT
-main "$@" >&2
+main "$@"
