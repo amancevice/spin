@@ -11,7 +11,7 @@ _SPIN_STREAM=false                  # Stream/async flag
 _SPIN_STREAM_SLEEP=0.05             # Time to sleep between lines
 _SPIN_TEMPFILE="$(mktemp)"          # Tempfile for logs
 _SPIN_TEMPFILE_STDOUT="$(mktemp)"   # Tempfile for stdout
-_SPIN_VERSION=v0.1.3
+_SPIN_VERSION=v0.1.3                # Spin version
 
 # Colors
 SPIN_COLOR=true
@@ -26,7 +26,7 @@ SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
 # Options
 SPIN_COMMAND="${SPIN_COMMAND}"
 SPIN_LINES="${SPIN_LINES:-5}"
-SPIN_TIMEOUT="${SPIN_TIMEOUT}"
+SPIN_TIMEOUT="${SPIN_TIMEOUT:-0}"
 SPIN_TITLE="${SPIN_TITLE}"
 
 cleanup() {
@@ -64,14 +64,10 @@ execute_background() {
 	tput rmam
 
 	# Start command in background & capture PID
-	if [ -n "$SPIN_TIMEOUT" ] && $SPIN_SHOW_OUTPUT ; then
+	if $SPIN_SHOW_OUTPUT ; then
 		timeout $SPIN_TIMEOUT "$SPIN_COMMAND" 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
-	elif $SPIN_SHOW_OUTPUT ; then
-		eval "$SPIN_COMMAND" 1> "$_SPIN_TEMPFILE_STDOUT" 2> "$_SPIN_TEMPFILE" &
-	elif [ -n "$SPIN_TIMEOUT" ] ; then
-		timeout $SPIN_TIMEOUT "$SPIN_COMMAND" &> "$_SPIN_TEMPFILE" &
 	else
-		eval "$SPIN_COMMAND" &> "$_SPIN_TEMPFILE" &
+		timeout $SPIN_TIMEOUT "$SPIN_COMMAND" &> "$_SPIN_TEMPFILE" &
 	fi
 	_SPIN_PID=$!
 
