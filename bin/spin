@@ -24,6 +24,9 @@ SPIN_FOREGROUND=${SPIN_FOREGROUND:-false}
 SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
 
 # Options
+SPIN_CHAR_FINISH="${SPIN_CHAR_ERROR:-⠿}"
+SPIN_CHAR_ERROR="${SPIN_CHAR_ERROR:-✘}"
+SPIN_CHAR_SUCCESS="${SPIN_CHAR_SUCCESS:-✔}"
 SPIN_COMMAND="${SPIN_COMMAND}"
 SPIN_LINES="${SPIN_LINES:-5}"
 SPIN_TIMEOUT="${SPIN_TIMEOUT:-0}"
@@ -131,7 +134,13 @@ print_spinner() {
 print_spinner_dead() {
 	# Print spinner + title
 	tput setaf $SPIN_COLOR_LOGS
-	printf '%s\n' "⠿ $SPIN_TITLE"
+	if $SPIN_FOREGROUND ; then
+		printf '%s\n' "$SPIN_CHAR_FINISH $SPIN_TITLE"
+	elif [ $_SPIN_EXIT_CODE -eq 0 ] ; then
+		printf '%s\n' "$SPIN_CHAR_SUCCESS $SPIN_TITLE"
+	else
+		printf '%s\n' "$SPIN_CHAR_ERROR $SPIN_TITLE"
+	fi
 	tput sgr0
 }
 
@@ -177,20 +186,22 @@ trap_exit() {
 main() {
 	while (( $# )) ; do
 		case "$1" in
-			-h | --help)        shift ; print_help            ; return   ;;
-			-f | --foreground)  shift ; SPIN_FOREGROUND=true             ;;
-			-n | --lines)       shift ; SPIN_LINES=$1         ; shift    ;;
-			-C | --no-color)    shift ; SPIN_COLOR=false                 ;;
-			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true            ;;
-			-T | --timeout)     shift ; SPIN_TIMEOUT=$1       ; shift    ;;
-			-t | --title)       shift ; SPIN_TITLE="$1"       ; shift    ;;
-			-v | --version)     shift ; print_version         ; return   ;;
-			--color-logs)       shift ; SPIN_COLOR_LOGS=$1    ; shift    ;;
-			--color-spinner)    shift ; SPIN_COLOR_SPINNER=$1 ; shift    ;;
-			--color-title)      shift ; SPIN_COLOR_TITLE=$1   ; shift    ;;
-			--)                 shift ; SPIN_COMMAND="$@"     ; break    ;;
-			-*)                 shift ; print_help            ; return 2 ;;
-			*)                  SPIN_COMMAND="$@"             ; break    ;;
+			-h | --help)        shift ; print_help             ; return   ;;
+			-f | --foreground)  shift ; SPIN_FOREGROUND=true              ;;
+			-n | --lines)       shift ; SPIN_LINES=$1          ; shift    ;;
+			-C | --no-color)    shift ; SPIN_COLOR=false                  ;;
+			-o | --show-output) shift ; SPIN_SHOW_OUTPUT=true             ;;
+			-T | --timeout)     shift ; SPIN_TIMEOUT=$1        ; shift    ;;
+			-t | --title)       shift ; SPIN_TITLE="$1"        ; shift    ;;
+			-v | --version)     shift ; print_version          ; return   ;;
+			--char-error)       shift ; SPIN_CHAR_ERROR="$1"   ; shift    ;;
+			--char-success)     shift ; SPIN_CHAR_SUCCESS="$1" ; shift    ;;
+			--color-logs)       shift ; SPIN_COLOR_LOGS=$1     ; shift    ;;
+			--color-spinner)    shift ; SPIN_COLOR_SPINNER=$1  ; shift    ;;
+			--color-title)      shift ; SPIN_COLOR_TITLE=$1    ; shift    ;;
+			--)                 shift ; SPIN_COMMAND="$@"      ; break    ;;
+			-*)                 shift ; print_help             ; return 2 ;;
+			*)                  SPIN_COMMAND="$@"              ; break    ;;
 		esac
 	done
 
