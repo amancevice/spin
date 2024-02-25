@@ -4,14 +4,14 @@ set -eo pipefail
 
 # Internal settings
 _SPIN_EXIT_CODE=0                  # Exit code holder
-_SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)  # Spinner character
+_SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)  # Spinner characters
 _SPIN_SPINNER_CURSOR=0             # Cursor for _SPIN_SPINNER_CHARS
 _SPIN_STREAM_SLEEP=0.05            # Time to sleep between lines
 _SPIN_SCREEN="$(mktemp)"           # Tempfile for screen
 _SPIN_CLEAN="$(mktemp)"            # Tempfile for clean
 _SPIN_STDOUT="$(mktemp)"           # Tempfile for stdout
 _SPIN_STDERR="$(mktemp)"           # Tempfile for stderr
-_SPIN_VERSION=v0.1.3               # Spin version
+_SPIN_VERSION=v0.1.5               # Spin version
 
 # Colors
 SPIN_COLOR=${SPIN_COLOR:-true}
@@ -108,14 +108,16 @@ print_help() {
 		Options:
 		  -h, --help             Show this message
 		  -f, --foreground       Run command in foreground
-		  -n, --lines LINES      Lines to print before scrolling (default: 5)
+		  -n, --lines LINES      Lines to print before scrolling (default: $SPIN_LINES)
 		  -o, --show-output      Show stdout contents on command completion
-		  -T, --timeout SECONDS  Kill process after N seconds
+		  -T, --timeout SECONDS  Kill process after N seconds (default: $SPIN_TIMEOUT)
 		  -t, --title TITLE      Spinner title text
 		  -v, --version          Show version
-		  --color-logs COLOR     ANSI color of log stream (default: 240)
-		  --color-spinner COLOR  ANSI color of spinner (default: 209)
-		  --color-title COLOR    ANSI color of title (default: 69)
+		  --char-error CHAR      Spinner character on error (default: $SPIN_CHAR_ERROR)
+		  --char-success CHAR    Spinner character on success (default: $SPIN_CHAR_SUCCESS)
+		  --color-logs COLOR     ANSI color of log stream (default: $SPIN_COLOR_LOGS)
+		  --color-spinner COLOR  ANSI color of spinner (default: $SPIN_COLOR_SPINNER)
+		  --color-title COLOR    ANSI color of title (default: $SPIN_COLOR_TITLE)
 	HELP
 }
 
