@@ -14,7 +14,7 @@ _SPIN_STDERR="$(mktemp)"           # Tempfile for stderr
 _SPIN_VERSION=v0.1.3               # Spin version
 
 # Colors
-SPIN_COLOR=true
+SPIN_COLOR=${SPIN_COLOR:-true}
 SPIN_COLOR_LOGS=${SPIN_COLOR_LOGS:-240}
 SPIN_COLOR_SPINNER=${SPIN_COLOR_SPINNER:-209}
 SPIN_COLOR_TITLE=${SPIN_COLOR_TITLE:-69}
