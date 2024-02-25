@@ -1,21 +1,21 @@
 PREFIX := /usr/local
 
 test:
-	./bin/spin --help
+	bin/spin --help
 	@echo
-	./bin/spin --version
+	bin/spin --version
 	@echo
-	./bin/spin -- bin/example
+	bin/spin -- bin/example
 	@echo
-	./bin/spin -o -- bin/example
+	bin/spin -o -- bin/example
 	@echo
-	./bin/spin -f -- bin/example
+	bin/spin -f -- bin/example
 	@echo
-	./bin/spin -C -- bin/example
+	bin/spin -C -- bin/example
 	@echo
-	! ./bin/spin -- bin/example 127
+	! bin/spin -- bin/example 127
 	@echo
-	! ./bin/spin -T 1 -- bin/example
+	! bin/spin -T 1 -- bin/example
 
 install:
 	ln -sf $$PWD/bin/spin $(PREFIX)/bin/spin
