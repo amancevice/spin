@@ -5,6 +5,9 @@ for i in $(seq 1 ${2:-25}) ; do
 	sleep 0.1
 done
 
-echo 'All Done!'
+case $1 in
+	''|0) echo 'All done!' ;;
+	*) echo "Error $1" >&2 ;;
+esac
 
 exit ${1:-0}
