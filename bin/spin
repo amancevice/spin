@@ -163,12 +163,14 @@ print_version() {
 
 tput() {
 	case "$TERM" in
-		'' | dumb) ;;
-		*)
-			case "$1" in
-				setaf | sgr0) ! $SPIN_COLOR || command tput "$@" ;;
-				*) command tput "$@" ;;
-			esac
+		'' | dumb) return ;;
+	esac
+
+	case "$1" in
+		setaf | sgr0) ! $SPIN_COLOR || command tput "$@" ;;
+		rmam) [ -n "$TMUX" ] && printf "\e[?7l" || command tput "$@" ;;
+		smam) [ -n "$TMUX" ] && printf "\e[?7h" || command tput "$@" ;;
+		*) command tput "$@" ;;
 	esac
 }
 
