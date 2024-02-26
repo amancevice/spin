@@ -98,7 +98,7 @@ execute_foreground() {
 print_cleanup() {
 	# Print escape characters to clear printed lines
 	while IFS= read -r line ; do
-		printf '\e[A\e[K' ;
+		printf '\e[A\e[K'
 	done < "$_SPIN_SCREEN"
 }
 
