@@ -39,6 +39,9 @@ cleanup() {
 	# Show dead spinner
 	$SPIN_FOREGROUND || print_spinner_dead
 
+	# Reset word wrap
+	tput smam
+
 	case $_SPIN_EXIT_CODE in
 		# OK
 		0) ;;
@@ -50,7 +53,6 @@ cleanup() {
 
 	# Ensure terminal is reset
 	tput sgr0
-	tput smam
 }
 
 execute_background() {
@@ -174,12 +176,12 @@ trap_exit() {
 	_SPIN_EXIT_CODE=$?
 
 	# Clean up stderr
-	cleanup >&2
+	$SPIN_FOREGROUND || cleanup >&2
 
 	# Show stdout
 	$SPIN_FOREGROUND || ! $SPIN_SHOW_OUTPUT || cat "$_SPIN_STDOUT"
 
-	# Clean up temp dir
+	# Clean up tempfiles
 	rm -f "$_SPIN_SCREEN" "$_SPIN_CLEAN" "$_SPIN_STDOUT" "$_SPIN_STDERR"
 
 	return $_SPIN_EXIT_CODE
