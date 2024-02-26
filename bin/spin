@@ -11,7 +11,7 @@ _SPIN_SCREEN="$(mktemp)"           # Tempfile for screen
 _SPIN_CLEAN="$(mktemp)"            # Tempfile for clean
 _SPIN_STDOUT="$(mktemp)"           # Tempfile for stdout
 _SPIN_STDERR="$(mktemp)"           # Tempfile for stderr
-_SPIN_VERSION=v0.1.6               # Spin version
+_SPIN_VERSION=v0.1.7               # Spin version
 
 # Colors
 SPIN_COLOR=${SPIN_COLOR:-true}
@@ -92,7 +92,7 @@ execute_background() {
 
 execute_foreground() {
 	print_spinner_dead >&2
-	timeout $SPIN_TIMEOUT $SHELL -c "${SPIN_COMMAND[@]}"
+	eval "${SPIN_COMMAND[@]}"
 }
 
 print_cleanup() {
@@ -109,17 +109,17 @@ print_help() {
 
 		Options:
 		  -h, --help             Show this message
-		  -f, --foreground       Run command in foreground
-		  -n, --lines LINES      Lines to print before scrolling (default: $SPIN_LINES)
+		  -f, --foreground       Run command in foreground [overrides --timeout]
+		  -n, --lines LINES      Lines to print before scrolling (default "$SPIN_LINES")
 		  -o, --show-output      Show stdout contents on command completion
-		  -T, --timeout SECONDS  Kill process after N seconds (default: $SPIN_TIMEOUT)
+		  -T, --timeout SECONDS  Kill process after N seconds (default "$SPIN_TIMEOUT") [ignored with --foreground]
 		  -t, --title TITLE      Spinner title text
 		  -v, --version          Show version
-		  --char-error CHAR      Spinner character on error (default: $SPIN_CHAR_ERROR)
-		  --char-success CHAR    Spinner character on success (default: $SPIN_CHAR_SUCCESS)
-		  --color-logs COLOR     ANSI color of log stream (default: $SPIN_COLOR_LOGS)
-		  --color-spinner COLOR  ANSI color of spinner (default: $SPIN_COLOR_SPINNER)
-		  --color-title COLOR    ANSI color of title (default: $SPIN_COLOR_TITLE)
+		  --char-error CHAR      Spinner character on error (default "$SPIN_CHAR_ERROR")
+		  --char-success CHAR    Spinner character on success (default "$SPIN_CHAR_SUCCESS")
+		  --color-logs COLOR     ANSI color of log stream (default "$SPIN_COLOR_LOGS")
+		  --color-spinner COLOR  ANSI color of spinner (default "$SPIN_COLOR_SPINNER")
+		  --color-title COLOR    ANSI color of title (default "$SPIN_COLOR_TITLE")
 	HELP
 }
 
@@ -214,6 +214,11 @@ main() {
 	# Set default title
 	if [ -z "$SPIN_TITLE" ] ; then
 		SPIN_TITLE="${SPIN_COMMAND[*]}"
+	fi
+
+	# Warn on --foreground + --timeout
+	if $SPIN_FOREGROUND && [ $SPIN_TIMEOUT -ne 0 ] ; then
+		echo 'WARNING: --timeout option is ignored with --foreground' >&2
 	fi
 
 	if $SPIN_FOREGROUND ; then
