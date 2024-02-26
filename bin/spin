@@ -11,7 +11,7 @@ _SPIN_SCREEN="$(mktemp)"           # Tempfile for screen
 _SPIN_CLEAN="$(mktemp)"            # Tempfile for clean
 _SPIN_STDOUT="$(mktemp)"           # Tempfile for stdout
 _SPIN_STDERR="$(mktemp)"           # Tempfile for stderr
-_SPIN_VERSION=v0.1.7               # Spin version
+_SPIN_VERSION=v0.1.8               # Spin version
 
 # Colors
 SPIN_COLOR=${SPIN_COLOR:-true}
