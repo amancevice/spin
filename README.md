@@ -11,17 +11,17 @@ Inspired by Docker's layer build output.
 Simple usage:
 
 ```bash
-spin -- ./bin/spin-example
+spin -- bin/example
 ```
 
 Customize the colors (ANSI codes), number of lines streamed, and title:
 
 ```bash
 spin \
---color 235 \
+--title 'just an example' \
 --lines 7 \
---spinner-color 41 \
---title spin-example \
---title-color 99 \
--- ./bin/spin-example
+--color-logs 235 \
+--color-spinner 41 \
+--color-title 99 \
+-- bin/example
 ```
