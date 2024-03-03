@@ -83,7 +83,7 @@ execute_background() {
 		if ps -p $_SPIN_PID &> /dev/null ; then
 			sleep $_SPIN_STREAM_SLEEP
 		elif wait $_SPIN_PID ; then
-			return
+			return 0
 		else
 			return $?
 		fi
@@ -163,7 +163,7 @@ print_version() {
 
 tput() {
 	case "$TERM" in
-		'' | dumb) return ;;
+		'' | dumb) return 0 ;;
 	esac
 
 	case "$1" in
