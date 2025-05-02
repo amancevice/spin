@@ -125,15 +125,16 @@ print_help() {
 }
 
 print_spinner() {
-	# Increment spinner character
-	_SPIN_SPINNER_CURSOR=$(expr $_SPIN_SPINNER_CURSOR % $(expr ${#_SPIN_SPINNER_CHARS[@]} - 1) + 1)
-
 	# Print spinner + title
 	tput setaf $SPIN_COLOR_SPINNER
 	printf '%s ' "${_SPIN_SPINNER_CHARS[$_SPIN_SPINNER_CURSOR]}"
 	tput setaf $SPIN_COLOR_TITLE
 	printf '%s\n' "$SPIN_TITLE"
 	tput sgr0
+
+	# Increment spinner character
+	_SPIN_SPINNER_CURSOR=$(expr $_SPIN_SPINNER_CURSOR + 1)
+	[ $_SPIN_SPINNER_CURSOR -lt ${#_SPIN_SPINNER_CHARS[@]} ] || _SPIN_SPINNER_CURSOR=0
 }
 
 print_spinner_dead() {
