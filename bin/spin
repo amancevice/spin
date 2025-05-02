@@ -3,15 +3,16 @@
 set -eo pipefail
 
 # Internal settings
-_SPIN_EXIT_CODE=0                  # Exit code holder
-_SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)  # Spinner characters
-_SPIN_SPINNER_CURSOR=0             # Cursor for _SPIN_SPINNER_CHARS
-_SPIN_STREAM_SLEEP=0.05            # Time to sleep between lines
-_SPIN_SCREEN="$(mktemp)"           # Tempfile for screen
-_SPIN_CLEAN="$(mktemp)"            # Tempfile for clean
-_SPIN_STDOUT="$(mktemp)"           # Tempfile for stdout
-_SPIN_STDERR="$(mktemp)"           # Tempfile for stderr
-_SPIN_VERSION=v0.1.8               # Spin version
+_SPIN_EXIT_CODE=0                      # Exit code holder
+# _SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)     # Spinner characters
+_SPIN_SPINNER_CHARS=(⣷ ⣯ ⣟ ⡿ ⢿ ⣻ ⣽ ⣾) # Spinner characters
+_SPIN_SPINNER_CURSOR=0                 # Cursor for _SPIN_SPINNER_CHARS
+_SPIN_STREAM_SLEEP=0.05                # Time to sleep between lines
+_SPIN_SCREEN="$(mktemp)"               # Tempfile for screen
+_SPIN_CLEAN="$(mktemp)"                # Tempfile for clean
+_SPIN_STDOUT="$(mktemp)"               # Tempfile for stdout
+_SPIN_STDERR="$(mktemp)"               # Tempfile for stderr
+_SPIN_VERSION=v0.1.8                   # Spin version
 
 # Colors
 SPIN_COLOR=${SPIN_COLOR:-true}
@@ -125,7 +126,7 @@ print_help() {
 
 print_spinner() {
 	# Increment spinner character
-	_SPIN_SPINNER_CURSOR=$(expr $_SPIN_SPINNER_CURSOR % 5 + 1)
+	_SPIN_SPINNER_CURSOR=$(expr $_SPIN_SPINNER_CURSOR % $(expr ${#_SPIN_SPINNER_CHARS[@]} - 1) + 1)
 
 	# Print spinner + title
 	tput setaf $SPIN_COLOR_SPINNER
