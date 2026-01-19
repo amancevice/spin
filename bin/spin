@@ -38,22 +38,7 @@ cleanup() {
 	print_cleanup
 
 	# Show dead spinner
-	$SPIN_FOREGROUND || print_spinner_dead
-
-	# Reset word wrap
-	tput smam
-
-	case $_SPIN_EXIT_CODE in
-		# OK
-		0) ;;
-		# Usage error
-		2) print_help ;;
-		# General error
-		*) print_stream ;;
-	esac
-
-	# Ensure terminal is reset
-	tput sgr0
+	print_spinner_dead
 }
 
 execute_background() {
@@ -61,11 +46,7 @@ execute_background() {
 	tput rmam
 
 	# Start command in background & capture PID
-	if $SPIN_SHOW_OUTPUT ; then
-		timeout $SPIN_TIMEOUT $SHELL -c "${SPIN_COMMAND[@]}" 1> "$_SPIN_STDOUT" 2> "$_SPIN_STDERR" &
-	else
-		timeout $SPIN_TIMEOUT $SHELL -c "${SPIN_COMMAND[@]}" &> "$_SPIN_STDERR" &
-	fi
+	timeout $SPIN_TIMEOUT $SHELL -c "${SPIN_COMMAND[@]}" 1> "$_SPIN_STDOUT" 2> "$_SPIN_STDERR" &
 	_SPIN_PID=$!
 
 	# Spin!
@@ -182,8 +163,17 @@ trap_exit() {
 	# Clean up stderr
 	$SPIN_FOREGROUND || cleanup >&2
 
+	# Reset word wrap
+	tput smam
+
+	# Reset formatting
+	tput sgr0
+
 	# Show stdout
 	$SPIN_FOREGROUND || ! $SPIN_SHOW_OUTPUT || cat "$_SPIN_STDOUT"
+
+	# Show stderr
+	[ $_SPIN_EXIT_CODE -eq 0 ] || cat "$_SPIN_STDERR" >&2
 
 	# Clean up tempfiles
 	rm -f "$_SPIN_SCREEN" "$_SPIN_CLEAN" "$_SPIN_STDOUT" "$_SPIN_STDERR"
