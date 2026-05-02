@@ -4,7 +4,6 @@ set -eo pipefail
 
 # Internal settings
 _SPIN_EXIT_CODE=0                      # Exit code holder
-# _SPIN_SPINNER_CHARS=(⠏ ⠛ ⠹ ⠼ ⠶ ⠧)     # Spinner characters
 _SPIN_SPINNER_CHARS=(⣷ ⣯ ⣟ ⡿ ⢿ ⣻ ⣽ ⣾) # Spinner characters
 _SPIN_SPINNER_CURSOR=0                 # Cursor for _SPIN_SPINNER_CHARS
 _SPIN_STREAM_SLEEP=0.05                # Time to sleep between lines
@@ -28,10 +27,10 @@ SPIN_SHOW_OUTPUT=${SPIN_SHOW_OUTPUT:-false}
 SPIN_CHAR_FINISH="${SPIN_CHAR_FINISH:-⣿}"
 SPIN_CHAR_ERROR="${SPIN_CHAR_ERROR:-✘}"
 SPIN_CHAR_SUCCESS="${SPIN_CHAR_SUCCESS:-✔}"
-SPIN_COMMAND="${SPIN_COMMAND}"
+SPIN_COMMAND=("${SPIN_COMMAND}")
 SPIN_LINES="${SPIN_LINES:-5}"
 SPIN_TIMEOUT="${SPIN_TIMEOUT:-0}"
-SPIN_TITLE="${SPIN_TITLE}"
+SPIN_TITLE="${SPIN_TITLE:-}"
 
 cleanup() {
 	# Clear screen
@@ -46,7 +45,7 @@ execute_background() {
 	tput rmam
 
 	# Start command in background & capture PID
-	timeout $SPIN_TIMEOUT $SHELL -c "${SPIN_COMMAND[@]}" 1> "$_SPIN_STDOUT" 2> "$_SPIN_STDERR" &
+	timeout "$SPIN_TIMEOUT" "${SPIN_COMMAND[@]}" 1> "$_SPIN_STDOUT" 2> "$_SPIN_STDERR" &
 	_SPIN_PID=$!
 
 	# Spin!
@@ -74,7 +73,7 @@ execute_background() {
 
 execute_foreground() {
 	print_spinner_dead >&2
-	eval "${SPIN_COMMAND[@]}"
+	"${SPIN_COMMAND[@]}"
 }
 
 print_cleanup() {
@@ -107,20 +106,20 @@ print_help() {
 
 print_spinner() {
 	# Print spinner + title
-	tput setaf $SPIN_COLOR_SPINNER
+	tput setaf "$SPIN_COLOR_SPINNER"
 	printf '%s ' "${_SPIN_SPINNER_CHARS[$_SPIN_SPINNER_CURSOR]}"
-	tput setaf $SPIN_COLOR_TITLE
+	tput setaf "$SPIN_COLOR_TITLE"
 	printf '%s\n' "$SPIN_TITLE"
 	tput sgr0
 
 	# Increment spinner character
-	_SPIN_SPINNER_CURSOR=$(expr $_SPIN_SPINNER_CURSOR + 1)
-	[ $_SPIN_SPINNER_CURSOR -lt ${#_SPIN_SPINNER_CHARS[@]} ] || _SPIN_SPINNER_CURSOR=0
+	_SPIN_SPINNER_CURSOR=$(( _SPIN_SPINNER_CURSOR + 1 ))
+	[ "$_SPIN_SPINNER_CURSOR" -lt ${#_SPIN_SPINNER_CHARS[@]} ] || _SPIN_SPINNER_CURSOR=0
 }
 
 print_spinner_dead() {
 	# Print spinner + title
-	tput setaf $SPIN_COLOR_LOGS
+	tput setaf "$SPIN_COLOR_LOGS"
 	if $SPIN_FOREGROUND ; then
 		printf '%s\n' "$SPIN_CHAR_FINISH $SPIN_TITLE"
 	elif [ $_SPIN_EXIT_CODE -eq 0 ] ; then
@@ -133,10 +132,10 @@ print_spinner_dead() {
 
 print_stream() {
 	# Print log lines
-	tput setaf $SPIN_COLOR_LOGS
+	tput setaf "$SPIN_COLOR_LOGS"
 	while IFS= read -r line ; do
 		printf '%s\n' "$line"
-	done < <(tail -n $SPIN_LINES "$_SPIN_STDERR")
+	done < <(tail -n "$SPIN_LINES" "$_SPIN_STDERR")
 	tput sgr0
 }
 
@@ -151,8 +150,8 @@ tput() {
 
 	case "$1" in
 		setaf | sgr0) ! $SPIN_COLOR || command tput "$@" ;;
-		rmam) [ -n "$TMUX" ] && printf "\e[?7l" || command tput "$@" ;;
-		smam) [ -n "$TMUX" ] && printf "\e[?7h" || command tput "$@" ;;
+		rmam) if [ -n "$TMUX" ] ; then printf "\e[?7l" ; else command tput "$@" ; fi ;;
+		smam) if [ -n "$TMUX" ] ; then printf "\e[?7h" ; else command tput "$@" ; fi ;;
 		*) command tput "$@" ;;
 	esac
 }
@@ -197,9 +196,9 @@ main() {
 			--color-logs)       shift ; SPIN_COLOR_LOGS=$1     ; shift    ;;
 			--color-spinner)    shift ; SPIN_COLOR_SPINNER=$1  ; shift    ;;
 			--color-title)      shift ; SPIN_COLOR_TITLE=$1    ; shift    ;;
-			--)                 shift ; SPIN_COMMAND="$@"      ; break    ;;
+			--)                 shift ; SPIN_COMMAND=("$@")      ; break    ;;
 			-*)                 shift ; print_help             ; return 2 ;;
-			*)                  SPIN_COMMAND="$@"              ; break    ;;
+			*)                  SPIN_COMMAND=("$@")              ; break    ;;
 		esac
 	done
 
@@ -211,7 +210,7 @@ main() {
 	fi
 
 	# Warn on --foreground + --timeout
-	if $SPIN_FOREGROUND && [ $SPIN_TIMEOUT -ne 0 ] ; then
+	if $SPIN_FOREGROUND && [ "$SPIN_TIMEOUT" -ne 0 ] ; then
 		echo 'WARNING: --timeout option is ignored with --foreground' >&2
 	fi
 
