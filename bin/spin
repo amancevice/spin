@@ -6,7 +6,7 @@ set -eo pipefail
 _SPIN_EXIT_CODE=0                      # Exit code holder
 _SPIN_SPINNER_CHARS=(⣷ ⣯ ⣟ ⡿ ⢿ ⣻ ⣽ ⣾) # Spinner characters
 _SPIN_SPINNER_CURSOR=0                 # Cursor for _SPIN_SPINNER_CHARS
-_SPIN_STREAM_SLEEP=0.05                # Time to sleep between lines
+_SPIN_STREAM_SLEEP=0.01                # Time to sleep between lines
 _SPIN_SCREEN="$(mktemp)"               # Tempfile for screen
 _SPIN_CLEAN="$(mktemp)"                # Tempfile for clean
 _SPIN_STDOUT="$(mktemp)"               # Tempfile for stdout
